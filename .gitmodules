@@ -1,0 +1,4 @@
+[submodule "Grounded-SAM-2"]
+	path = Grounded-SAM-2
+	url = git@github.com:Jquinto64/Grounded-SAM-2-MassID45.git
+	branch = main
