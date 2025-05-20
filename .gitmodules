@@ -10,3 +10,15 @@
 	path = CutLER
 	url = git@github.com:Jquinto64/CutLER-MassID45.git
 	branch = main
+[submodule "MaskDINO"]
+	path = MaskDINO
+	url = git@github.com:Jquinto64/MaskDINO-MassID45.git
+	branch = main
+[submodule "Mask2Former"]
+	path = Mask2Former
+	url = git@github.com:Jquinto64/Mask2Former-MassID45.git
+	branch = main
+[submodule "Mask-RCNN"]
+	path = Mask-RCNN
+	url = git@github.com:Jquinto64/Mask-RCNN-MassID45.git
+	branch = main
