@@ -132,8 +132,8 @@ def get_sahi_tiled_annots(sliced_coco_data, min_size=15, remove_cutoff=False):
 
     return tiled_annotations, invalid_annotations, too_small_annotations, cutoff_annotations
 
-# Load test image for masking out invalid or cut-off images
-test_img = cv2.imread("/h/jquinto/LIFEPLAN_SAHI_tiling/G1BMRA_0010.jpg", cv2.IMREAD_COLOR)
+# Load test image for masking out invalid or cut-off images (if necessary or if remove_cutoff is True)
+test_img = cv2.imread("assets/G1BMRA_0010.jpg", cv2.IMREAD_COLOR)
 background_value = test_img[1400:1450, 2000:2050, :]
 
 def draw_mask(image, mask_data, color, shape='polygon', roi = None):
@@ -533,50 +533,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# # Load dataset JSON
-# DATASET_BASE_PATH = "/h/jquinto/LIFEPLAN_SAHI_tiling/sahi_datasets/sahi_1536_ignore_neg"
-# CROP_SZ = int(DATASET_BASE_PATH.split("/")[-1].split("_")[1])
-# print(CROP_SZ)
-
-# # Load test image for masking out invalid or cut-off images
-# test_img = cv2.imread("/h/jquinto/LIFEPLAN_SAHI_tiling/G1BMRA_0010.jpg", cv2.IMREAD_COLOR)
-# # test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
-# background_value = test_img[1400:1450, 2000:2050, :]
-
-# for split in ["train", "val"]:
-#     DATASET_JSON_PATH = f"{DATASET_BASE_PATH}/annotations/instances_{split}2017.json"
-#     with open(DATASET_JSON_PATH, "r") as f:
-#         sliced_coco_data = json.load(f)
-#     check_crop_szs(sliced_coco_data, CROP_SZ)
-
-#     # Set path for masked images
-#     base_mask_dir = f"{DATASET_BASE_PATH}/{split}2017_masked"
-#     if os.path.exists(base_mask_dir) is False:
-#         os.makedirs(base_mask_dir)
-#     # if os.path.exists(f"{DATASET_BASE_PATH}/{split}2017_masked_viz") is False:
-#     #     os.makedirs(f"{DATASET_BASE_PATH}/{split}2017_masked_viz")
-
-#     # Now correct the annotations
-#     sahi_coco_data_fixed = merge_multi_polys(sliced_coco_data)
-
-#     # Post-process annotations by masking invalid/cutoff masks
-#     tiled_annotations, invalid_annotations, small_annotations, cutoff_annotations = get_sahi_tiled_annots(
-#         sahi_coco_data_fixed,
-#         remove_cutoff = True
-#     )
-#     visualize_tiled_annotations_sahi(
-#         masked_save_path = base_mask_dir, 
-#         tiled_img_path = f"{DATASET_BASE_PATH}/{split}2017",
-#         tiled_annotations = tiled_annotations,
-#         invalid_annotations = invalid_annotations,
-#         too_small_annotations = small_annotations,
-#         cutoff_annotations = cutoff_annotations,
-#         save_img = True,
-#         plot_img = False,
-#         remove_cutoff = True
-#     )
-
-#     with open(f"{DATASET_BASE_PATH}/{split}2017_masked.pkl", "wb") as f:
-#         pickle.dump(tiled_annotations, f)
-

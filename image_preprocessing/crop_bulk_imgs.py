@@ -5,522 +5,516 @@ import numpy as np
 from PIL import Image
 import shutil
 from tqdm import tqdm
-
-SAVE_PATH = "/content/drive/MyDrive/LIFEPLAN_Annotated_Bulk_Imgs/Revised_Images_b_Mar_2025"
-base_dir = "/content/drive/MyDrive/lifeplan_b_v9"
-
-with open(f"{SAVE_PATH}/coco_format_assembled_b_v9.json", "r") as f:
-  assembled_coco_data = json.load(f)
-
-# Iterate through each train2017 and val2017 JSON
-with open(f"{base_dir}/annotations/instances_train2017.json", "r") as file:
-    train_data = json.load(file)
-with open(f"{base_dir}/annotations/instances_val2017.json", "r") as file:
-    val_data = json.load(file)
-with open(f"{base_dir}/annotations/instances_test2017.json", "r") as file:
-    test_data = json.load(file)
-
-print(len(train_data['annotations']), len(val_data['annotations']), len(test_data['annotations']))
+import argparse
 
 def calculate_image_bounding_box(annotations, image_width, image_height, buffer_pixels=0):
-    """Calculates the bounding box for all annotations in an image with optional buffer.
-
-    Args:
-        annotations: A list of annotation dictionaries for a single image.
-        image_width: The width of the image.
-        image_height: The height of the image.
-        buffer_pixels: Number of pixels to add as buffer around the bounding box.
-
-    Returns:
-        A tuple (min_x, min_y, max_x, max_y) representing the bounding box,
-        or None if there are no valid annotations.
-    """
-    min_x = image_width
-    min_y = image_height
-    max_x = 0
-    max_y = 0
+    """Calculates the bounding box for all annotations in an image with optional buffer."""
+    min_x, min_y = float('inf'), float('inf')
+    max_x, max_y = float('-inf'), float('-inf')
     has_valid_annotation = False
 
     for annotation in annotations:
         if 'segmentation' in annotation and annotation['segmentation']:
-            if isinstance(annotation['segmentation'], list):
-                for polygon in annotation['segmentation']:
-                    if len(polygon) % 2 != 0:
-                        continue  # Skip if polygon is invalid
-                    x_coords = polygon[::2]
-                    y_coords = polygon[1::2]
+            # Ensure segmentation is a list of polygons
+            segments = annotation['segmentation']
+            if not isinstance(segments, list):
+                # If it's a single RLE or polygon, wrap it in a list
+                segments = [segments]
+            
+            for polygon_coords in segments:
+                # Handle RLE (not fully implemented here, assumes polygon list)
+                if isinstance(polygon_coords, dict) and 'counts' in polygon_coords:
+                    # print(f"Warning: RLE segmentation found for annotation {annotation.get('id')}, bounding box from RLE not implemented. Using annotation bbox if available.")
+                    if 'bbox' in annotation:
+                        ann_x, ann_y, ann_w, ann_h = annotation['bbox']
+                        min_x = min(ann_x, min_x)
+                        min_y = min(ann_y, min_y)
+                        max_x = max(ann_x + ann_w, max_x)
+                        max_y = max(ann_y + ann_h, max_y)
+                        has_valid_annotation = True
+                    continue
 
-                    min_x = min(min(x_coords), min_x)
-                    min_y = min(min(y_coords), min_y)
-                    max_x = max(max(x_coords), max_x)
-                    max_y = max(max(y_coords), max_y)
-                    has_valid_annotation = True
+                # Assuming polygon_coords is a flat list [x1, y1, x2, y2, ...]
+                if not isinstance(polygon_coords, list) or len(polygon_coords) < 6 or len(polygon_coords) % 2 != 0:
+                    # print(f"Warning: Invalid polygon format or too few points for annotation {annotation.get('id')}. Length: {len(polygon_coords) if isinstance(polygon_coords, list) else 'Not a list'}")
+                    continue 
+                
+                x_coords = polygon_coords[::2]
+                y_coords = polygon_coords[1::2]
 
-    if has_valid_annotation:
-        # Apply buffer while ensuring bounds
-        min_x = max(0, min_x - buffer_pixels)
-        min_y = max(0, min_y - buffer_pixels)
-        max_x = min(image_width, max_x + buffer_pixels)
-        max_y = min(image_height, max_y + buffer_pixels)
-        return min_x, min_y, max_x, max_y
-    else:
+                if not x_coords or not y_coords: continue # Should not happen with len check
+
+                current_min_x = min(x_coords)
+                current_min_y = min(y_coords)
+                current_max_x = max(x_coords)
+                current_max_y = max(y_coords)
+                
+                min_x = min(current_min_x, min_x)
+                min_y = min(current_min_y, min_y)
+                max_x = max(current_max_x, max_x)
+                max_y = max(current_max_y, max_y)
+                has_valid_annotation = True
+    
+    if not has_valid_annotation and min_x == float('inf'): # No valid segmentations found
+        # print("No valid segmentations to calculate bounding box.")
         return None
 
-def visualize_and_save_bounding_box(image_path, annotations, bbox, output_dir):
-    """Visualizes bounding box and masks on an image using OpenCV and saves the result.
+    # Apply buffer while ensuring bounds
+    min_x = max(0, min_x - buffer_pixels)
+    min_y = max(0, min_y - buffer_pixels)
+    max_x = min(image_width, max_x + buffer_pixels)
+    max_y = min(image_height, max_y + buffer_pixels)
+    
+    # Ensure min is not greater than max (can happen if buffer is too large or initial box is tiny)
+    if min_x >= max_x or min_y >= max_y:
+        # print(f"Warning: Invalid bounding box after buffer: min_x={min_x}, max_x={max_x}, min_y={min_y}, max_y={max_y}. Reverting to no buffer or original image size if no annots.")
+        # Fallback logic: try without buffer, or if still invalid, might return None or full image
+        # This part might need more sophisticated handling based on requirements.
+        # For now, let's re-calculate without buffer if this happens.
+        if buffer_pixels > 0:
+            return calculate_image_bounding_box(annotations, image_width, image_height, 0) # Try no buffer
+        else: # Already no buffer, box is inherently invalid (e.g. all points are the same)
+            return None
 
-    Args:
-        image_path: Path to the image file.
-        annotations: A list of annotation dictionaries for a single image.
-        bbox: A tuple (min_x, min_y, max_x, max_y) representing the bounding box.
-        output_dir: Directory where the visualized image will be saved.
-    """
+
+    return min_x, min_y, max_x, max_y
+
+def visualize_and_save_bounding_box(image_path, annotations, bbox, output_dir, plot_masks=False):
+    """Visualizes bounding box and masks on an image using OpenCV and saves the result."""
     try:
-        # Read image with OpenCV
         img = cv2.imread(image_path)
         if img is None:
             print(f"Error: Could not read image at {image_path}")
             return
 
-        # Create copy for visualization
         viz_img = img.copy()
 
-        # # Draw masks
-        # for annotation in annotations:
-        #     if 'segmentation' in annotation and annotation['segmentation']:
-        #         if isinstance(annotation['segmentation'], list):
-        #             for polygon in annotation['segmentation']:
-        #                 if len(polygon) % 2 != 0:
-        #                     continue
+        if plot_masks:
+            for annotation in annotations:
+                if 'segmentation' in annotation and annotation['segmentation']:
+                    segments = annotation['segmentation']
+                    if not isinstance(segments, list): segments = [segments] # Ensure list
 
-        #                 # Convert polygon coordinates to numpy array
-        #                 points = np.array(list(zip(polygon[::2], polygon[1::2])), dtype=np.int32)
+                    for polygon_coords in segments:
+                        if isinstance(polygon_coords, dict): continue # Skip RLE for mask plotting here
+                        if not isinstance(polygon_coords, list) or len(polygon_coords) < 6 or len(polygon_coords) % 2 != 0:
+                            continue
+                        
+                        points = np.array(list(zip(polygon_coords[::2], polygon_coords[1::2])), dtype=np.int32)
+                        cv2.fillPoly(viz_img, [points], color=(97, 73, 164), lineType=cv2.LINE_AA)
+                        cv2.polylines(viz_img, [points], True, color=(97, 73, 164), thickness=2, lineType=cv2.LINE_AA)
 
-        #                 # Draw filled polygon as mask
-        #                 cv2.fillPoly(viz_img, [points], color=(97, 73, 164), lineType=cv2.LINE_AA)
-
-        #                 # Draw polygon outline
-        #                 cv2.polylines(viz_img, [points], True, color=(97, 73, 164),
-        #                             thickness=2, lineType=cv2.LINE_AA)
-
-        # Draw the bounding box
         if bbox:
             min_x, min_y, max_x, max_y = [int(coord) for coord in bbox]
-            cv2.rectangle(viz_img, (min_x, min_y), (max_x, max_y),
-                         color=(139, 0, 0), thickness=3, lineType=cv2.LINE_AA)
+            cv2.rectangle(viz_img, (min_x, min_y), (max_x, max_y), color=(139, 0, 0), thickness=3, lineType=cv2.LINE_AA)
 
-        # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
-
-        # Save the visualized image
         output_path = os.path.join(output_dir, os.path.basename(image_path))
         cv2.imwrite(output_path, viz_img)
-        print(f"Saved visualization to: {output_path}")
+        # print(f"Saved BBox visualization to: {output_path}")
 
     except Exception as e:
-        print(f"Error processing image {image_path}: {str(e)}")
+        print(f"Error processing image {image_path} for BBox visualization: {str(e)}")
 
-def process_dataset(annotations_file, base_dir, split, output_dir, buffer_pixels=0):
-    """Process the dataset to get bounding boxes for each image.
-
-    Args:
-        annotations_file: Path to the COCO format annotations file.
-        base_dir: Base directory containing the dataset.
-        split: Dataset split ('train', 'val', or 'test').
-        output_dir: Directory where visualized images will be saved.
-        buffer_pixels: Number of pixels to add as buffer around bounding boxes.
-
-    Returns:
-        Dictionary mapping image names to their bounding box coordinates.
-    """
-    # Load COCO annotations
+def generate_bounding_boxes_for_dataset(annotations_file_path, input_image_dir_for_split, 
+                                       visualization_output_dir_for_split, 
+                                       buffer_pixels=0, plot_masks_on_viz=False):
+    """Process the dataset to get bounding boxes for each image."""
     try:
-        with open(annotations_file, 'r') as f:
+        with open(annotations_file_path, 'r') as f:
             data = json.load(f)
     except FileNotFoundError:
-        print(f"Error: Annotations file not found at {annotations_file}")
+        print(f"Error: Annotations file not found at {annotations_file_path}")
         return {}
     except json.JSONDecodeError:
-        print("Error: Invalid JSON format in annotations file")
+        print(f"Error: Invalid JSON format in annotations file {annotations_file_path}")
         return {}
 
-    bounding_boxes = {}
+    image_name_to_bbox_map = {}
+    if visualization_output_dir_for_split:
+        os.makedirs(visualization_output_dir_for_split, exist_ok=True)
 
-    # Create split-specific output directory
-    split_output_dir = os.path.join(output_dir, f"{split}2017")
-    os.makedirs(split_output_dir, exist_ok=True)
-
-    # Process each image
-    for image_data in data['images']:
+    print(f"Generating bounding boxes for images in {input_image_dir_for_split}...")
+    for image_data in tqdm(data.get('images', []), desc="Generating BBoxes"):
         image_id = image_data['id']
         image_name = image_data['file_name']
-        image_width = image_data['width']
-        image_height = image_data['height']
+        image_width = image_data.get('width')
+        image_height = image_data.get('height')
 
-        # Get annotations for the current image
-        image_annotations = [ann for ann in data['annotations']
-                           if ann['image_id'] == image_id]
+        if image_width is None or image_height is None:
+            # print(f"Warning: Missing width/height for image {image_name}. Skipping.")
+            # Optionally, try to read from disk if path is available, but COCO should have it.
+            # For now, skip if not in JSON.
+            img_path_check = os.path.join(input_image_dir_for_split, image_name)
+            if os.path.exists(img_path_check):
+                try:
+                    img_temp = Image.open(img_path_check)
+                    image_width, image_height = img_temp.size
+                    # print(f"  Read dimensions from disk for {image_name}: {image_width}x{image_height}")
+                except Exception as e_read:
+                    print(f"  Could not read dimensions from disk for {image_name}: {e_read}. Skipping bbox calculation.")
+                    continue
+            else:
+                print(f"Warning: Image {image_name} not found at {img_path_check} and dimensions missing in JSON. Skipping bbox calculation.")
+                continue
 
-        # Calculate bounding box for this image
-        bbox = calculate_image_bounding_box(
-            image_annotations,
-            image_width,
-            image_height,
-            buffer_pixels
-        )
+
+        image_annotations = [ann for ann in data.get('annotations', []) if ann['image_id'] == image_id]
+
+        bbox = calculate_image_bounding_box(image_annotations, image_width, image_height, buffer_pixels)
 
         if bbox:
-            bounding_boxes[image_name] = bbox
-
-            # Visualize and save the bounding box
-            image_path = os.path.join(base_dir, f"{split}2017", image_name)
-            print(f"Processing: {image_path}")
-            visualize_and_save_bounding_box(image_path, image_annotations, bbox, split_output_dir)
-        else:
-            print(f"No valid annotations for image: {image_name}")
-
-    return bounding_boxes
-
-# Set your paths here
-base_dir = "/content/drive/MyDrive/lifeplan_b_v9"
-output_dir = "/content/drive/MyDrive/lifeplan_b_v9_crop_visualizations_on_original"  # Specify your output directory
-splits = ['train', 'val', 'test']
-buffer_pixels = 200  # Set your desired buffer size here
-
-manual_cropped_boxes = []
-for split in splits:
-    annotations_file = os.path.join(base_dir, f"annotations/instances_{split}2017.json")
-    # Process the dataset and get bounding boxes with buffer
-    bounding_boxes = process_dataset(annotations_file, base_dir, split, output_dir, buffer_pixels)
-    manual_cropped_boxes.append(bounding_boxes)
-
-    # Print the results
-    print(f"\nBounding boxes for {split} split:")
-    for image_name, bbox in bounding_boxes.items():
-        print(f"{image_name}: {bbox}")
-
-manual_cropped_dict = {}
-for d in manual_cropped_boxes:
-  for k, v in d.items():
-    manual_cropped_dict[k] = v
+            image_name_to_bbox_map[image_name] = bbox
+            if visualization_output_dir_for_split:
+                image_full_path = os.path.join(input_image_dir_for_split, image_name)
+                visualize_and_save_bounding_box(image_full_path, image_annotations, bbox, 
+                                                visualization_output_dir_for_split, plot_masks_on_viz)
+        # else:
+            # print(f"No valid annotations or bounding box could be calculated for image: {image_name}")
+            
+    return image_name_to_bbox_map
 
 class COCODatasetCropper:
-    def __init__(self, base_dir):
-        """Initialize the COCO dataset cropper.
+    def __init__(self, input_coco_base_dir):
+        self.input_coco_base_dir = input_coco_base_dir
 
-        Args:
-            base_dir: Base directory containing the COCO dataset
-        """
-        self.base_dir = base_dir
-        self.splits = ['train', 'val', 'test']
-        self.year = '2017'  # Change if using different COCO version
-
-    def load_annotations(self, split):
-        """Load annotation file for given split.
-
-        Args:
-            split: Dataset split ('train', 'val', or 'test')
-
-        Returns:
-            Loaded annotation data or None if file doesn't exist
-        """
-        ann_file = os.path.join(
-            self.base_dir,
-            'annotations',
-            f'instances_{split}{self.year}.json'
-        )
+    def _load_annotations(self, split):
+        ann_file = os.path.join(self.input_coco_base_dir, 'annotations', f'instances_{split}2017.json')
         if os.path.exists(ann_file):
             with open(ann_file, 'r') as f:
                 return json.load(f)
+        print(f"Warning: Annotation file not found for {split} at {ann_file}")
         return None
 
-    def validate_image_bbox(self, bbox, image_annotations):
-        """Validate that the bounding box includes all annotations for a specific image.
+    def _validate_image_bbox_contains_all_segmentations(self, bbox_coords, image_annotations_list):
+        min_x_crop, min_y_crop, max_x_crop, max_y_crop = bbox_coords
+        truncated_annotation_ids = []
 
-        Args:
-            bbox: Tuple (min_x, min_y, max_x, max_y)
-            image_annotations: List of annotations for the image
-
-        Returns:
-            Boolean indicating if bbox is valid and list of any truncated annotations
-        """
-        min_x, min_y, max_x, max_y = bbox
-        truncated_annotations = []
-
-        for ann in image_annotations:
+        for ann in image_annotations_list:
             if 'segmentation' in ann and ann['segmentation']:
-                if isinstance(ann['segmentation'], list):
-                    for polygon in ann['segmentation']:
-                        if len(polygon) % 2 != 0:
-                            continue
-                        x_coords = polygon[::2]
-                        y_coords = polygon[1::2]
+                segments = ann['segmentation']
+                if not isinstance(segments, list): segments = [segments]
 
-                        # Check if any point lies outside the bbox
-                        if (any(x < min_x or x > max_x for x in x_coords) or
-                            any(y < min_y or y > max_y for y in y_coords)):
-                            truncated_annotations.append(ann['id'])
+                for polygon_coords in segments:
+                    if isinstance(polygon_coords, dict): continue # Skip RLE for this validation
+                    if not isinstance(polygon_coords, list) or len(polygon_coords) < 6 or len(polygon_coords) % 2 != 0:
+                        continue
+                    
+                    x_coords = polygon_coords[::2]
+                    y_coords = polygon_coords[1::2]
 
-        return len(truncated_annotations) == 0, truncated_annotations
+                    if (any(x < min_x_crop or x > max_x_crop for x in x_coords) or
+                        any(y < min_y_crop or y > max_y_crop for y in y_coords)):
+                        truncated_annotation_ids.append(ann['id'])
+                        break # This annotation is truncated, no need to check its other segments
+        
+        return not truncated_annotation_ids, truncated_annotation_ids # True if no truncations
 
-    def adjust_image_coordinates(self, image_annotations, bbox):
-        """Adjust annotation coordinates for a specific image based on its cropping bbox.
+    def _adjust_annotation_coords_to_cropped_image(self, image_annotations_list, crop_bbox_coords):
+        crop_origin_x, crop_origin_y, _, _ = crop_bbox_coords
+        adjusted_annotations_list = []
 
-        Args:
-            image_annotations: List of annotations for the image
-            bbox: Tuple (min_x, min_y, max_x, max_y)
+        for ann_orig in image_annotations_list:
+            adj_ann = copy.deepcopy(ann_orig) # Work on a copy
+            if 'segmentation' in adj_ann and adj_ann['segmentation']:
+                original_segments = adj_ann['segmentation']
+                if not isinstance(original_segments, list): original_segments = [original_segments]
+                
+                adjusted_segments_for_this_ann = []
+                all_adj_x_coords_for_ann = []
+                all_adj_y_coords_for_ann = []
 
-        Returns:
-            List of adjusted annotations
-        """
-        min_x, min_y, max_x, max_y = bbox
-        adjusted_annotations = []
+                for polygon_coords in original_segments:
+                    if isinstance(polygon_coords, dict): # RLE
+                        # Adjusting RLE is complex, often involves re-encoding.
+                        # For now, if original was RLE, we might keep it as RLE but note that its relation to image changes.
+                        # Or, convert to polygon, adjust, then decide if re-encoding is needed.
+                        # Simplest: skip RLE adjustment or copy as is. Let's copy as is and rely on bbox.
+                        # print(f"Warning: RLE segmentation for ann {adj_ann['id']} in adjusted data. Positional accuracy relative to crop needs care.")
+                        adjusted_segments_for_this_ann.append(polygon_coords) # Copy RLE as is
+                        # Try to use original bbox for RLE if needed for adjusted_ann['bbox']
+                        if 'bbox' in ann_orig:
+                             rle_x, rle_y, rle_w, rle_h = ann_orig['bbox']
+                             all_adj_x_coords_for_ann.extend([rle_x - crop_origin_x, rle_x - crop_origin_x + rle_w])
+                             all_adj_y_coords_for_ann.extend([rle_y - crop_origin_y, rle_y - crop_origin_y + rle_h])
+                        continue
 
-        for ann in image_annotations:
-            adjusted_ann = ann.copy()
-            if 'segmentation' in adjusted_ann and adjusted_ann['segmentation']:
-                if isinstance(adjusted_ann['segmentation'], list):
-                    adjusted_segments = []
-                    for polygon in adjusted_ann['segmentation']:
-                        if len(polygon) % 2 != 0:
-                            continue
-                        adjusted_polygon = []
-                        for i in range(0, len(polygon), 2):
-                            # Adjust x coordinate
-                            adj_x = polygon[i] - min_x
-                            # Adjust y coordinate
-                            adj_y = polygon[i + 1] - min_y
-                            adjusted_polygon.extend([adj_x, adj_y])
-                        adjusted_segments.append(adjusted_polygon)
-                    adjusted_ann['segmentation'] = adjusted_segments
+                    if not isinstance(polygon_coords, list) or len(polygon_coords) < 6 or len(polygon_coords) % 2 != 0:
+                        adjusted_segments_for_this_ann.append(polygon_coords) # Copy invalid as is
+                        continue 
 
-                    # Recalculate bbox based on adjusted segmentation
-                    x_coords = [p for polygon in adjusted_segments for p in polygon[::2]]
-                    y_coords = [p for polygon in adjusted_segments for p in polygon[1::2]]
-                    if x_coords and y_coords:
-                        adjusted_ann['bbox'] = [
-                            min(x_coords),
-                            min(y_coords),
-                            max(x_coords) - min(x_coords),
-                            max(y_coords) - min(y_coords)
-                        ]
-            adjusted_annotations.append(adjusted_ann)
+                    adj_poly = []
+                    current_poly_adj_x = []
+                    current_poly_adj_y = []
+                    for i in range(0, len(polygon_coords), 2):
+                        adj_x = polygon_coords[i] - crop_origin_x
+                        adj_y = polygon_coords[i+1] - crop_origin_y
+                        adj_poly.extend([adj_x, adj_y])
+                        current_poly_adj_x.append(adj_x)
+                        current_poly_adj_y.append(adj_y)
+                    
+                    adjusted_segments_for_this_ann.append(adj_poly)
+                    all_adj_x_coords_for_ann.extend(current_poly_adj_x)
+                    all_adj_y_coords_for_ann.extend(current_poly_adj_y)
+                
+                adj_ann['segmentation'] = adjusted_segments_for_this_ann
 
-        return adjusted_annotations
+                # Recalculate bbox for the annotation based on all its adjusted segments
+                if all_adj_x_coords_for_ann and all_adj_y_coords_for_ann:
+                    min_overall_x = min(all_adj_x_coords_for_ann)
+                    min_overall_y = min(all_adj_y_coords_for_ann)
+                    max_overall_x = max(all_adj_x_coords_for_ann)
+                    max_overall_y = max(all_adj_y_coords_for_ann)
+                    adj_ann['bbox'] = [
+                        min_overall_x,
+                        min_overall_y,
+                        max_overall_x - min_overall_x,
+                        max_overall_y - min_overall_y
+                    ]
+                elif 'bbox' in adj_ann: # If no valid segmentations to derive bbox, remove old one
+                    del adj_ann['bbox']
 
-    def visualize_annotations(self, image_path, annotations, output_path=None):
-        """Visualize annotations on an image using OpenCV.
 
-        Args:
-            image_path: Path to the image file
-            annotations: List of annotation dictionaries
-            output_path: Optional path to save visualization
-        """
+            adjusted_annotations_list.append(adj_ann)
+        return adjusted_annotations_list
+
+    def _visualize_adjusted_annotations(self, cropped_image_path, adjusted_annotations_list, visualization_output_path):
         try:
-            import cv2
-            import numpy as np
-
-            # Read image with OpenCV
-            img = cv2.imread(image_path)
+            img = cv2.imread(cropped_image_path)
             if img is None:
-                raise ValueError(f"Could not read image: {image_path}")
+                raise ValueError(f"Could not read cropped image for visualization: {cropped_image_path}")
 
-            # Create two masks: one for fill and one for borders
-            mask_fill = np.zeros(img.shape[:2], dtype=np.uint8)
-            mask_border = np.zeros(img.shape[:2], dtype=np.uint8)
+            # Colors for visualization (adapt as needed)
+            fill_color_bgr = (255, 127, 0)  # Medium blue for fill
+            border_color_bgr = (255, 0, 0)   # Darker blue for border
+            
+            # Create a copy for drawing
+            viz_img = img.copy()
+            
+            # Create overlays for fill and border to handle transparency better
+            overlay_fill = np.zeros_like(viz_img, dtype=np.uint8)
+            overlay_border = np.zeros_like(viz_img, dtype=np.uint8)
 
-            # Fill in all annotation polygons
-            for ann in annotations:
+
+            for ann in adjusted_annotations_list:
                 if 'segmentation' in ann and ann['segmentation']:
-                    if isinstance(ann['segmentation'], list):
-                        for polygon in ann['segmentation']:
-                            if len(polygon) % 2 != 0:
-                                continue
+                    segments = ann['segmentation']
+                    if not isinstance(segments, list): segments = [segments]
 
-                            # Convert polygon to numpy array of points
-                            points = np.array(list(zip(polygon[::2], polygon[1::2])), dtype=np.int32)
+                    for polygon_coords in segments:
+                        if isinstance(polygon_coords, dict): continue # Skip RLE
+                        if not isinstance(polygon_coords, list) or len(polygon_coords) < 6 or len(polygon_coords) % 2 != 0:
+                            continue
+                        
+                        points = np.array(list(zip(polygon_coords[::2], polygon_coords[1::2])), dtype=np.int32)
+                        
+                        cv2.fillPoly(overlay_fill, [points], fill_color_bgr)
+                        cv2.polylines(overlay_border, [points], True, border_color_bgr, thickness=2)
+            
+            # Blend fill overlay
+            alpha = 0.4 # Transparency for fill
+            cv2.addWeighted(overlay_fill, alpha, viz_img, 1 - alpha, 0, viz_img)
+            
+            # Add borders on top (no transparency)
+            viz_img[overlay_border[:,:,0] == border_color_bgr[0]] = border_color_bgr # A bit hacky, better way is per-pixel
 
-                            # Fill polygon in the fill mask
-                            cv2.fillPoly(mask_fill, [points], 255)
 
-                            # Draw polygon border in the border mask
-                            cv2.polylines(mask_border, [points], True, 255, thickness=2)
-
-            # Create colored overlays
-            overlay = img.copy()
-            # Blue fill (BGR format: 255, 127, 0 is a medium blue)
-            overlay[mask_fill > 0] = [255, 127, 0]
-            # Darker blue border (BGR format: 255, 0, 0 is a darker blue)
-            overlay[mask_border > 0] = [255, 0, 0]
-
-            # Blend the original image and overlay
-            alpha = 0.4
-            output = cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0)
-
-            # Add the dark borders on top with full opacity
-            output[mask_border > 0] = [255, 0, 0]
-
-            if output_path:
-                # Ensure directory exists
-                os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                # Save the visualization
-                cv2.imwrite(output_path, output)
-
-            return output
+            os.makedirs(os.path.dirname(visualization_output_path), exist_ok=True)
+            cv2.imwrite(visualization_output_path, viz_img)
+            # print(f"Saved annotation visualization to: {visualization_output_path}")
 
         except Exception as e:
-            print(f"Error visualizing annotations: {str(e)}")
-            return None
+            print(f"Error visualizing adjusted annotations for {cropped_image_path}: {str(e)}")
 
-    def process_split(self, split, bboxes_dict, output_base_dir, visualize=False):
-        """Process a single dataset split.
 
-        Args:
-            split: Dataset split name ('train', 'val', or 'test')
-            bboxes_dict: Dictionary mapping image names to their bounding boxes
-            output_base_dir: Base directory for output
-            visualize: Whether to create visualization of annotations
+    def process_split(self, split_name, image_to_bbox_map, output_dataset_base_dir, create_visualizations=False):
+        print(f"\nProcessing COCO split: {split_name}")
+        input_annotations_data = self._load_annotations(split_name)
+        if not input_annotations_data: return False
 
-        Returns:
-            Boolean indicating success
-        """
-        print(f"\nProcessing {split} split...")
+        input_image_dir_for_split = os.path.join(self.input_coco_base_dir, f'{split_name}2017')
+        output_image_dir_for_split = os.path.join(output_dataset_base_dir, f'{split_name}2017')
+        os.makedirs(output_image_dir_for_split, exist_ok=True)
 
-        # Load annotations
-        annotations_data = self.load_annotations(split)
-        if not annotations_data:
-            print(f"No annotations found for {split} split")
-            return False
+        # Prepare structure for the new (cropped) COCO annotation file
+        output_annotations_data = copy.deepcopy(input_annotations_data)
+        output_annotations_data['annotations'] = []
+        output_annotations_data['images'] = []
 
-        # Setup input/output directories
-        input_dir = os.path.join(self.base_dir, f'{split}{self.year}')
-        output_dir = os.path.join(output_base_dir, f'{split}{self.year}')
-        os.makedirs(output_dir, exist_ok=True)
-
-        # Create new annotations structure
-        adjusted_data = annotations_data.copy()
-        adjusted_data['annotations'] = []
-        adjusted_data['images'] = []
-
-        # Process images
-        print("Cropping images...")
-        success_count = 0
-
-        for img in tqdm(annotations_data['images']):
-            if img['file_name'] not in bboxes_dict:
-                print(f"Warning: No bounding box found for {img['file_name']}")
+        successful_crops = 0
+        for img_entry_orig in tqdm(input_annotations_data.get('images',[]), desc=f"Cropping {split_name} images"):
+            image_filename = img_entry_orig['file_name']
+            
+            if image_filename not in image_to_bbox_map:
+                # print(f"Warning: No bounding box provided for image {image_filename}. Skipping this image.")
                 continue
+            
+            crop_bbox = image_to_bbox_map[image_filename] # (min_x, min_y, max_x, max_y)
 
-            bbox = bboxes_dict[img['file_name']]
-
-            # Get annotations for this image
-            img_annotations = [
-                ann for ann in annotations_data['annotations']
-                if ann['image_id'] == img['id']
+            annotations_for_this_image = [
+                ann for ann in input_annotations_data.get('annotations',[]) 
+                if ann['image_id'] == img_entry_orig['id']
             ]
 
-            # Validate bbox
-            is_valid, truncated = self.validate_image_bbox(bbox, img_annotations)
-            if not is_valid:
-                print(f"Warning: Bounding box would truncate annotations in {img['file_name']}")
-                continue
+            # Optional: Validate that the crop_bbox doesn't truncate any critical part of annotations
+            # is_bbox_valid, _ = self._validate_image_bbox_contains_all_segmentations(crop_bbox, annotations_for_this_image)
+            # if not is_bbox_valid:
+            #     print(f"Warning: Crop bounding box for {image_filename} would truncate annotations. Skipping this image.")
+            #     continue # Or handle differently, e.g., adjust bbox
 
-            # Crop and save image, then get actual dimensions
-            input_path = os.path.join(input_dir, img['file_name'])
-            output_path = os.path.join(output_dir, img['file_name'])
-            output_path = output_path.replace(".jpg", ".png")
+            input_image_path = os.path.join(input_image_dir_for_split, image_filename)
+            # Output images will be PNG
+            output_image_filename_png = os.path.splitext(image_filename)[0] + ".png"
+            output_image_path_png = os.path.join(output_image_dir_for_split, output_image_filename_png)
 
             try:
-                with Image.open(input_path) as image:
-                    if image.mode != 'RGB':
-                        image = image.convert('RGB')
+                with Image.open(input_image_path) as img_pil:
+                    if img_pil.mode != 'RGB': img_pil = img_pil.convert('RGB')
+                    
+                    min_x, min_y, max_x, max_y = map(int, crop_bbox) # Ensure integer coordinates for PIL crop
+                    cropped_img_pil = img_pil.crop((min_x, min_y, max_x, max_y))
+                    cropped_img_pil.save(output_image_path_png, format='PNG')
 
-                    min_x, min_y, max_x, max_y = bbox
-                    cropped = image.crop((min_x, min_y, max_x, max_y))
+                actual_cropped_width, actual_cropped_height = cropped_img_pil.size
 
-                    # Get actual dimensions of cropped image    # NEW
-                    actual_width, actual_height = cropped.size  # NEW
+                # Update image entry for the new COCO JSON
+                adj_img_entry = copy.deepcopy(img_entry_orig)
+                adj_img_entry['width'] = actual_cropped_width
+                adj_img_entry['height'] = actual_cropped_height
+                adj_img_entry['file_name'] = output_image_filename_png
+                if 'path' in adj_img_entry: # If original had 'path', update it
+                     adj_img_entry['path'] = os.path.join(os.path.dirname(adj_img_entry.get('path', '')), output_image_filename_png)
 
-                    # Create output directory if needed
-                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                output_annotations_data['images'].append(adj_img_entry)
 
-                    # Save the cropped image
-                    cropped.save(output_path, format='PNG')
+                # Adjust annotation coordinates
+                adjusted_annots = self._adjust_annotation_coords_to_cropped_image(annotations_for_this_image, crop_bbox)
+                output_annotations_data['annotations'].extend(adjusted_annots)
+                
+                successful_crops += 1
 
-                    # Adjust image dimensions using actual cropped size
-                    adjusted_img = img.copy()
-                    adjusted_img['width'] = actual_width      # Changed: Uses actual size
-                    adjusted_img['height'] = actual_height    # Changed: Uses actual size
-                    adjusted_img['file_name'] = img['file_name'].replace('.jpg', '.png')
-                    adjusted_img['path'] = img['path'].replace('.jpg', '.png')
-                    adjusted_data['images'].append(adjusted_img)
+                if create_visualizations:
+                    vis_dir = os.path.join(output_dataset_base_dir, f'{split_name}2017_annot_visualizations')
+                    output_vis_path = os.path.join(vis_dir, f"{os.path.splitext(output_image_filename_png)[0]}_annot.png")
+                    self._visualize_adjusted_annotations(output_image_path_png, adjusted_annots, output_vis_path)
 
-                    # Adjust annotations
-                    adjusted_annotations = self.adjust_image_coordinates(img_annotations, bbox)
-                    adjusted_data['annotations'].extend(adjusted_annotations)
-
-                    success_count += 1
-
-                    # Visualize if requested
-                    if visualize:
-                        vis_dir = os.path.join(output_base_dir, f'{split}{self.year}_visualizations')
-                        os.makedirs(vis_dir, exist_ok=True)
-                        output_vis_path = os.path.join(
-                            vis_dir,
-                            f"{os.path.splitext(img['file_name'])[0]}_annotated.png"
-                        )
-                        self.visualize_annotations(output_path, adjusted_annotations, output_vis_path)
-
+            except FileNotFoundError:
+                print(f"Error: Input image not found at {input_image_path}")
             except Exception as e:
-                print(f"Error processing {input_path}: {str(e)}")
-                continue
+                print(f"Error cropping/processing image {input_image_path}: {e}")
+        
+        # Save the new annotation file for the cropped dataset
+        output_annotations_dir = os.path.join(output_dataset_base_dir, 'annotations')
+        os.makedirs(output_annotations_dir, exist_ok=True)
+        output_ann_file_path = os.path.join(output_annotations_dir, f'instances_{split_name}2017.json')
+        with open(output_ann_file_path, 'w') as f:
+            json.dump(output_annotations_data, f, indent=2) # Using indent=2 for smaller files
 
-        # Save adjusted annotations
-        output_ann_dir = os.path.join(output_base_dir, 'annotations')
-        os.makedirs(output_ann_dir, exist_ok=True)
-        with open(os.path.join(output_ann_dir, f'instances_{split}{self.year}.json'), 'w') as f:
-            json.dump(adjusted_data, f)
-
-        print(f"Successfully processed {success_count}/{len(annotations_data['images'])} images")
+        print(f"Successfully cropped {successful_crops}/{len(input_annotations_data.get('images',[]))} images for {split_name} split.")
+        print(f"Cropped annotations saved to: {output_ann_file_path}")
+        if create_visualizations:
+            print(f"Annotation visualizations saved in: {output_dataset_base_dir}/{split_name}2017_annot_visualizations/")
         return True
 
-    def process_dataset(self, bboxes_dict, output_base_dir, visualize=False):
-        """Process entire dataset across all splits.
+    def process_entire_dataset(self, image_name_to_bbox_map, output_dataset_base_dir, create_visualizations=False):
+        print(f"Starting COCO dataset cropping. Output will be in: {output_dataset_base_dir}")
+        overall_success = True
+        for split in ['train', 'val', 'test']: # Standard splits
+            if not self.process_split(split, image_name_to_bbox_map, output_dataset_base_dir, create_visualizations):
+                overall_success = False
+                print(f"Processing failed for {split} split.")
+        
+        if overall_success:
+            print("\nDataset cropping completed successfully for all splits!")
+        else:
+            print("\nErrors occurred during dataset cropping for one or more splits.")
+        return overall_success
 
-        Args:
-            bboxes_dict: Dictionary mapping image names to their bounding boxes
-            output_base_dir: Base directory for output
-            visualize: Whether to create visualization of annotations
+import copy # ensure copy is imported
 
-        Returns:
-            Boolean indicating overall success
-        """
-        print(f"Processing dataset with {len(bboxes_dict)} image bounding boxes")
-        print(f"Output directory: {output_base_dir}")
+def main(args):
+    # --- Part 1: Generate Bounding Boxes (from original script's first part) ---
+    all_splits_image_to_bbox_map = {}
+    
+    # Path for storing visualizations of the initially calculated bounding boxes
+    bbox_visualization_base_dir = None
+    if args.visualize_calculated_bboxes:
+        bbox_visualization_base_dir = os.path.join(args.output_dir_cropped_dataset, "crop_visualizations")
+        os.makedirs(bbox_visualization_base_dir, exist_ok=True)
 
-        success = True
-        for split in self.splits:
-            split_success = self.process_split(split, bboxes_dict, output_base_dir, visualize)
-            success = success and split_success
+    for split in args.splits_to_process:
+        print(f"\n--- Generating bounding boxes for {split} split ---")
+        input_annotations_file = os.path.join(args.input_base_dir, 'annotations', f'instances_{split}2017.json')
+        input_image_dir = os.path.join(args.input_base_dir, f'{split}2017')
+        
+        split_bbox_viz_dir = None
+        if bbox_visualization_base_dir:
+            split_bbox_viz_dir = os.path.join(bbox_visualization_base_dir, f"{split}2017")
+        
+        split_bboxes = generate_bounding_boxes_for_dataset(
+            annotations_file_path=input_annotations_file,
+            input_image_dir_for_split=input_image_dir,
+            visualization_output_dir_for_split=split_bbox_viz_dir, # Pass the specific dir for this split
+            buffer_pixels=args.buffer_pixels,
+            plot_masks_on_viz=args.plot_masks_on_bbox_viz 
+        )
+        all_splits_image_to_bbox_map.update(split_bboxes)
+        
+        if args.print_calculated_bboxes:
+            print(f"\nCalculated Bounding boxes for {split} split (buffer: {args.buffer_pixels}px):")
+            for img_name, bbox in split_bboxes.items():
+                print(f"  {img_name}: {bbox}")
+    
+    if not all_splits_image_to_bbox_map:
+        print("No bounding boxes were generated. Exiting.")
+        return
 
-        return success
+    # --- Part 2: Crop Dataset using COCODatasetCropper ---
+    print(f"\n--- Cropping dataset using generated bounding boxes ---")
+    cropper = COCODatasetCropper(input_coco_base_dir=args.input_base_dir)
+    
+    success = cropper.process_entire_dataset(
+        image_name_to_bbox_map=all_splits_image_to_bbox_map,
+        output_dataset_base_dir=args.output_dir_cropped_dataset,
+        create_visualizations=args.visualize_cropped_annotations
+    )
 
-# Example usage
-base_dir = "/content/drive/MyDrive/lifeplan_b_v9"
-output_dir = "/content/drive/MyDrive/lifeplan_b_v9_cropped_png"
-
-# Example bounding boxes dictionary
-bboxes_dict = manual_cropped_dict
-
-# Initialize and run the cropper
-cropper = COCODatasetCropper(base_dir)
-success = cropper.process_dataset(bboxes_dict, output_dir, visualize=True)
-
-if success:
-    print("\nDataset processing completed successfully!")
-    print(f"Cropped images and annotations saved to: {output_dir}")
-    print(f"Visualizations saved to: {output_dir}/<split>_visualizations/")
-else:
-    print("\nErrors occurred during dataset processing.")
+    if success:
+        print(f"\nCropping process finished. Results in: {args.output_dir_cropped_dataset}")
+    else:
+        print("\nCropping process encountered errors.")
 
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="COCO Dataset Preprocessing: Calculate bounding boxes for annotations and crop images and annotations accordingly.")
+
+    # --- Input Paths ---
+    parser.add_argument('--input_base_dir', type=str, required=True,
+                        help="Base directory of the input COCO dataset (e.g., 'lifeplan_b_v9_testing'). "
+                             "Should contain 'annotations/' and split image folders like 'train2017/'.")
+    
+    # --- Output Paths ---
+    parser.add_argument('--output_dir_cropped_dataset', type=str, required=True,
+                        help="Base directory where the new cropped COCO dataset will be saved "
+                             "(e.g., 'lifeplan_b_v9_testing_cropped_png'). This will also house visualizations if enabled.")
+
+    # --- Bounding Box Calculation Parameters ---
+    parser.add_argument('--buffer_pixels', type=int, default=200,
+                        help="Number of pixels to add as a buffer around the calculated bounding box of all annotations in an image. Default: 200.")
+    
+    # --- General Parameters ---
+    parser.add_argument('--splits_to_process', nargs='+', default=['train', 'val', 'test'],
+                        help="List of dataset splits to process (e.g., 'train' 'val'). Default: ['train', 'val', 'test'].")
+
+    # --- Visualization and Debugging Flags ---
+    parser.add_argument('--visualize_calculated_bboxes', action='store_true',
+                        help="If set, save visualizations of the initially calculated bounding boxes on the original images.")
+    parser.add_argument('--plot_masks_on_bbox_viz', action='store_true',
+                        help="If --visualize_calculated_bboxes is set, also plot annotation masks on these visualizations.")
+    parser.add_argument('--visualize_cropped_annotations', action='store_true',
+                        help="If set, save visualizations of the adjusted annotations on the newly cropped images.")
+    parser.add_argument('--print_calculated_bboxes', action='store_true',
+                        help="If set, print the calculated bounding box for each image to the console.")
+    
+    args = parser.parse_args()
+    main(args)
