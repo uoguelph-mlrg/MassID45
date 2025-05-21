@@ -17,7 +17,7 @@ The expected structure for this directory after running `pipeline.sh` is as foll
 
 ```bash
 image_preprocessing
-   ├── data                  
+   ├── data                               # Folder created by pipeline.sh
         └── batch-1                       # Raw data -- downloaded automatically by pipeline.sh
         └── batch-2       
         └── bulk_batch_1_and_2      
