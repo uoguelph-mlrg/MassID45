@@ -31,9 +31,14 @@ DATA_DIR="data/"
 # Name to assign to MassID45 dataset
 DATASET_NAME="lifeplan_b_v9_tsting"
 
-# Zoom factor (tile size) to split the bulk images into
-# zoom factor of 1 = 1024 x 1024, zoom factor of 2 = 512 x 512, zoom factor of 3 = 341 x 341...
-ZOOM_FACTOR=1
+# Input image size for models
+BASE_SLICE_SIZE=1024
+
+# Zoom factor (tile size) to split the bulk images into; default is set to 512 pixels
+# Note: zoom factor of 1 = 1024 x 1024, zoom factor of 2 = 512 x 512, zoom factor of 3 = 341 x 341...
+ZOOM_FACTOR=2
+
+ACTUAL_SLICE_SIZE=$((BASE_SLICE_SIZE / ZOOM_FACTOR))
 
 # Downloads bulk data from GDrive
 python download_data.py \
@@ -62,15 +67,15 @@ python tile_imgs.py \
     --input_base_dir data/${DATASET_NAME}_cropped \
     --sahi_output_base_dir ${DATA_DIR}/sahi_datasets \
     --zoom_factors ${ZOOM_FACTOR} \
-    --base_slice_size 1024 \
+    --base_slice_size BASE_SLICE_SIZE \
     --overlap_ratio 0.6 \
     --min_area_ratio 0.1
 
-# Note: only run the scripts below if you specified one zoom factor in the $ZOOM_FACTOR variable;
-# otherwise, run these separately for each zoom factor
+# # Note: only run the scripts below if you specified one zoom factor in the $ZOOM_FACTOR variable;
+# # otherwise, run these separately for each zoom factor
 
 # Postprocess invalid and/or disjoint polygons after tiling
-python postprocess_dataset.py --dataset_path ${DATA_DIR}/sahi_datasets/sahi_${ZOOM_FACTOR}_keep_neg
+python postprocess_dataset.py --dataset_path ${DATA_DIR}/sahi_datasets/sahi_${ACTUAL_SLICE_SIZE}_keep_neg
 
 # Check that all resulting annotations are valid
-python analyze_invalid_polygons.py --dataset_path ${DATA_DIR}/sahi_datasets/sahi_${ZOOM_FACTOR}_keep_neg
+python analyze_invalid_polygons.py --dataset_path ${DATA_DIR}/sahi_datasets/sahi_${ACTUAL_SLICE_SIZE}_keep_neg
