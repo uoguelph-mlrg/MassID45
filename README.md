@@ -12,7 +12,7 @@ The `CutLER`, `Mask-RCNN`, `Mask2Former`, `MaskDINO`, and `Grounded-SAM-2` submo
 Code to run the watershed algorithm and crop the bulk images into annotator patches is contained in the `arth-imrec` submodule.
 
 ## Downloading bulk imagery data
-The bulk images can be downloaded from Google Drive by running `image_preprocessing/download_data.py`.
+The bulk images can be downloaded from Google Drive by running `image_preprocessing/download_data.py`. Scripts for downloading the ENA sequence data can be found in the `image_preprocessing/ENA_sequence_scripts` folder. 
 
 ## Pre-processing bulk images for machine learning 
 The `image_preprocessing` folder contains utility scripts to:
