@@ -40,27 +40,27 @@ ZOOM_FACTOR=2
 
 ACTUAL_SLICE_SIZE=$((BASE_SLICE_SIZE / ZOOM_FACTOR))
 
-# # Downloads bulk data from GDrive
-# python download_data.py \
-#     --output_dir $DATA_DIR
+# Downloads bulk data from GDrive
+python download_data.py \
+    --output_dir $DATA_DIR
 
-# # Assembles annotations from annotator tiles
-# python assemble_annotations.py \
-#     --input_coco_json $COCO_JSON_PATH \
-#     --content_root_dir $DATA_DIR \
-#     --output_dir_processed_data ${DATA_DIR}/preprocessing_output/ \
-#     --final_output_coco_dir ${DATA_DIR}/${DATASET_NAME} \
-#     # --save_intermediate_images
+# Assembles annotations from annotator tiles
+python assemble_annotations.py \
+    --input_coco_json $COCO_JSON_PATH \
+    --content_root_dir $DATA_DIR \
+    --output_dir_processed_data ${DATA_DIR}/preprocessing_output/ \
+    --final_output_coco_dir ${DATA_DIR}/${DATASET_NAME} \
+    # --save_intermediate_images
 
-# # Crops bulk images down to area containing insects, with some buffer
-# python crop_bulk_imgs.py \
-#   --input_base_dir ${DATA_DIR}/${DATASET_NAME} \
-#   --output_dir_cropped_dataset ${DATA_DIR}/${DATASET_NAME}_cropped \
-#   --buffer_pixels 200 \
-#   --visualize_calculated_bboxes \
-#   --plot_masks_on_bbox_viz \
-#   --visualize_cropped_annotations \
-#   --print_calculated_bboxes
+# Crops bulk images down to area containing insects, with some buffer
+python crop_bulk_imgs.py \
+  --input_base_dir ${DATA_DIR}/${DATASET_NAME} \
+  --output_dir_cropped_dataset ${DATA_DIR}/${DATASET_NAME}_cropped \
+  --buffer_pixels 200 \
+  --visualize_calculated_bboxes \
+  --plot_masks_on_bbox_viz \
+  --visualize_cropped_annotations \
+  --print_calculated_bboxes
 
 # Divides bulk images into tiles using SAHI
 python tile_imgs.py \
