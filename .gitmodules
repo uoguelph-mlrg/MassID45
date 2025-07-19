@@ -1,0 +1,24 @@
+[submodule "Grounded-SAM-2"]
+	path = Grounded-SAM-2
+	url = git@github.com:Jquinto64/Grounded-SAM-2-MassID45.git
+	branch = main
+[submodule "arth-imrec"]
+	path = arth-imrec
+	url = git@github.com:Jquinto64/arth-imrec.git
+	branch = main
+[submodule "CutLER"]
+	path = CutLER
+	url = git@github.com:Jquinto64/CutLER-MassID45.git
+	branch = main
+[submodule "MaskDINO"]
+	path = MaskDINO
+	url = git@github.com:Jquinto64/MaskDINO-MassID45.git
+	branch = main
+[submodule "Mask2Former"]
+	path = Mask2Former
+	url = git@github.com:Jquinto64/Mask2Former-MassID45.git
+	branch = main
+[submodule "Mask-RCNN"]
+	path = Mask-RCNN
+	url = git@github.com:Jquinto64/Mask-RCNN-MassID45.git
+	branch = main

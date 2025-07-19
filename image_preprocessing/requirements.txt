@@ -1,0 +1,10 @@
+torch
+gdown
+opencv-python  # OpenCV (cv2) for environments without GUI
+numpy
+Pillow  # for Image and ImageDraw
+matplotlib
+shapely  # for geometry functions like Point, Polygon, etc.
+pandas
+tqdm  # progress bar utility
+sahi==0.11.18
