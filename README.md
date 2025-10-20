@@ -16,11 +16,11 @@ The bulk images can be downloaded from Google Drive by running `image_preprocess
 
 ## Pre-processing bulk images for machine learning 
 The `image_preprocessing` folder contains utility scripts to:
-    1. Download the bulk images `download_data.py`
-    2. Assemble the annotated patches into tiles `assemble_annotations.py`
-    3. Crop the bulk images `crop_bulk_imgs.py`
-    4. Divide the bulk images into tiles `tile_imgs.py`
-    5. And lastly, postprocess the sliced annotations `postprocess_dataset.py`
+1. Download the bulk images `download_data.py`
+2. Assemble the annotated patches into tiles `assemble_annotations.py`
+3. Crop the bulk images `crop_bulk_imgs.py`
+4. Divide the bulk images into tiles `tile_imgs.py`
+5. And lastly, postprocess the sliced annotations `postprocess_dataset.py`
 The entire preprocessing pipeline can be run via 
 ```bash
 sbatch pipeline.sh
