@@ -1,5 +1,5 @@
 # MassID45
-This repo contains code for the MassID45 dataset: a multi-modal dataset for insect biodiversity with imagery and DNA at the trap and individual level.
+This repo contains the preprocessing and training/inference code for MassID45: [A multi-modal dataset for insect biodiversity with imagery and DNA at the trap and individual level](https://arxiv.org/abs/2507.06972).
 
 # Installation
 Requirements for downloading and preprocessing the data can be found in the `image_preprocessing` folder. We recommend creating a dedicated Python environment for `image_preprocessing`.
