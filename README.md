@@ -30,7 +30,7 @@ sbatch pipeline.sh
 The `CutLER`, `Mask-RCNN`, `Mask2Former`, `MaskDINO`, and `Grounded-SAM-2` submodules each have their own usage instructions (see the `MassID45 Instructions` section in each submodule's `README.md`). We ran our experiments using 4 RTX6000 GPUs for training, and 1 RTX6000 GPU for testing. 
 
 ## Model Checkpoints
-Model checkpoints can be downloaded at [Zenodo](https://zenodo.org/records/15479862?preview=1&token=eyJhbGciOiJIUzUxMiIsImlhdCI6MTc0ODMzOTQ4MiwiZXhwIjoxNzY3MjI1NTk5fQ.eyJpZCI6ImMxZWMwZWU3LTI4YzUtNGZlOC05MzRjLWZkYzg0MDVkZTA0NCIsImRhdGEiOnt9LCJyYW5kb20iOiI2MTU1Njk2ZGFkNjQ2MWVhYTMwMGE4OTU2ZWRiYmRmNiJ9.EziUDAtN8O_6UpMT4_ns0E8wjOVYhYnQZFV0tmCPqPsCtCJ_RL3-g5zEINAnqtaxretr8e3Dxut80AUSsaQ0zg).
+Model checkpoints can be downloaded at [Zenodo](https://zenodo.org/records/15479862).
 
 
 
