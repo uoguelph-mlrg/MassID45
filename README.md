@@ -15,11 +15,11 @@ Code to run the watershed algorithm and crop the bulk images into annotator patc
 The bulk images can be downloaded from Google Drive by running `image_preprocessing/download_data.py`. Scripts for downloading the ENA sequence data can be found in the `image_preprocessing/ENA_sequence_scripts` folder. 
 
 ## Pre-processing bulk images for machine learning 
-The `image_preprocessing` folder contains utility scripts to:
+The `image_preprocessing` folder contains utility scripts for downloading and assembling the bulk image data. The data pipeline is as follows:
 1. Download the bulk images `download_data.py`
-2. Assemble the annotated patches into tiles `assemble_annotations.py`
-3. Crop the bulk images `crop_bulk_imgs.py`
-4. Divide the bulk images into tiles `tile_imgs.py`
+2. Assemble the annotated patches into the full bulk images `assemble_annotations.py`
+3. Crop the bulk images to exclude excess areas `crop_bulk_imgs.py`
+4. Divide the bulk images into tiles for training `tile_imgs.py`
 5. And lastly, postprocess the sliced annotations `postprocess_dataset.py`
 The entire preprocessing pipeline can be run via 
 ```bash
