@@ -60,7 +60,7 @@ def update_image_paths_and_dimensions(coco_data, content_root_dir, annotation_ti
             full_image_path = os.path.join(content_root_dir, img_entry['path'])
             
             # This is required as all the toras_paths are for 'batch-1', 
-            # yet in Zenodo we place everything in an 'annotation_tiles' directoryyy
+            # yet in Zenodo we place everything in an 'annotation_tiles' directory
             if not os.path.exists(full_image_path):
                 # Try replacing 'batch-1' and 'batch-2' as per original logic
                 alt_toras_path = re.sub(r'batch-[1-3]', annotation_tiles_dir, img_entry['toras_path'])

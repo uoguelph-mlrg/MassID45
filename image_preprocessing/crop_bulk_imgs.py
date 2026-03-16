@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import cv2
@@ -429,8 +430,6 @@ class COCODatasetCropper:
         else:
             print("\nErrors occurred during dataset cropping for one or more splits.")
         return overall_success
-
-import copy # ensure copy is imported
 
 def main(args):
     # --- Part 1: Generate Bounding Boxes (from original script's first part) ---
