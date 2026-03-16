@@ -8,7 +8,7 @@
                             # %x=job-name, %A=job ID, %a=array value, %n=node rank, %t=task rank, %N=hostname
                             # Note: You must manually create output directory "slogs" 
 #SBATCH --open-mode=append  # Use append mode otherwise preemption resets the checkpoint file
-#SBATCH --job-name=massid45_cleaning_tst
+#SBATCH --job-name=massid45_cleaning
 
 ENV_NAME=mid45_testing
 module load StdEnv/2020 gcc/9.3.0
@@ -24,7 +24,7 @@ python --version
 pip freeze
 
 # Location of MassID45 JSON (located in same directory by default)
-COCO_JSON_PATH="annots_20250307_coco.json" 
+COCO_JSON_PATH="assets/annots_20250307_coco.json" 
 
 # Directory to construct for storing downloaded/postprocessed data 
 DATA_DIR="data/"
