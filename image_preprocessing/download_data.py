@@ -1,39 +1,44 @@
-import gdown
-import zipfile
-import os
-import zipfile
 import argparse
+import os
+import requests
+from urllib.parse import urlparse
+import zipfile
 
+URLS = [
+    "https://zenodo.org/records/17831807/files/bulk_images_edited.zip?download=1",
+    #<PLACEHOLDER FOR UPDATED ZENODO LINK TO ANNOTATED_TILES>
+]
 
-def download_data(output_dir):
-    # Ensure the output directory exists
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    else:
-        return
+def download_data(save_path):
+    """Downloads a zip file to disk and then extracts it."""
+    os.makedirs(save_path, exist_ok=True)
+    for url in URLS:
+        filename = os.path.basename(urlparse(url).path)
+        zip_file_path = os.path.join(save_path, filename)
+        
+        print(f"Downloading to {zip_file_path}...")
+        try:
+            response = requests.get(url, stream=True)
+            response.raise_for_status() 
 
-    # Google Drive file links and their respective output zip names
-    drive_files = {
-        "https://drive.google.com/file/d/1bhgTt0OTy7MktVIgbFml6N0fYzHHgNMI/view?usp=drive_link": "batch-1.zip",
-        "https://drive.google.com/file/d/1iD0uRy0xcnqT9-E4ctjs9vSZnfrpDIYS/view?usp=drive_link": "batch-2.zip",
-        "https://drive.google.com/file/d/1WPITJZiR37BNdBb2llpRvG4sgtwL5sKq/view?usp=drive_link": "bulk_batch_1_and_2.zip",
-    }
+            with open(zip_file_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192): 
+                    f.write(chunk)
+            print("Download complete. Extracting...")
 
-    # Download and extract each file
-    for drive_link, zip_name in drive_files.items():
-        # Download the file from Google Drive
-        zip_path = os.path.join(output_dir, zip_name)
-        gdown.download(drive_link, zip_path, quiet=False, fuzzy=True)
+            with zipfile.ZipFile(zip_file_path, 'r') as z:
+                z.extractall(save_path)
+            print(f"Extraction complete to directory: {save_path}")
 
-        # Extract the zip file to the output directory
-        with zipfile.ZipFile(zip_path, "r") as f:
-            f.extractall(output_dir)
-    
+        except requests.exceptions.RequestException as e:
+            print(f"An error occurred during download: {e}")
+
     # Clean up zip fles 
-    dir_files = os.listdir(output_dir)
+    dir_files = os.listdir(save_path)
     for item in dir_files:
         if item.endswith(".zip"):
-            os.remove(os.path.join(output_dir, item))
+            os.remove(os.path.join(save_path, item))
+            
 
 def main(args):
     download_data(args.output_dir)

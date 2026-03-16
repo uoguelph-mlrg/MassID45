@@ -10,6 +10,7 @@ from shapely.geometry import Polygon, MultiPolygon, GeometryCollection
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 import argparse
+import re
 
 def load_coco_json(file_path):
     """Loads a COCO JSON file."""
@@ -41,7 +42,7 @@ def filter_annotations_by_category(coco_data, target_category_name):
     print(f"Filtered annotations by category '{target_category_name}'. Kept {len(coco_data['annotations'])} out of {original_count}.")
     return coco_data
 
-def update_image_paths_and_dimensions(coco_data, content_root_dir):
+def update_image_paths_and_dimensions(coco_data, content_root_dir, annotation_tiles_dir):
     """Updates image paths, dimensions, and filenames in COCO data."""
     print(f"Updating image paths and dimensions using content root: {content_root_dir}")
     images_to_remove_indices = []
@@ -59,10 +60,10 @@ def update_image_paths_and_dimensions(coco_data, content_root_dir):
             full_image_path = os.path.join(content_root_dir, img_entry['path'])
             
             # This is required as all the toras_paths are for 'batch-1', 
-            # yet in the GDrive folder and in TORAS we have 'batch-1' and 'batch-2'
+            # yet in Zenodo we place everything in an 'annotation_tiles' directoryyy
             if not os.path.exists(full_image_path):
-                # Try replacing 'batch-1' with 'batch-2' as per original logic
-                alt_toras_path = img_entry['toras_path'].replace('batch-1', 'batch-2')
+                # Try replacing 'batch-1' and 'batch-2' as per original logic
+                alt_toras_path = re.sub(r'batch-[1-3]', annotation_tiles_dir, img_entry['toras_path'])
                 alt_full_image_path = os.path.join(content_root_dir, alt_toras_path)
                 if os.path.exists(alt_full_image_path):
                     print(f"Found image at alternate path: {alt_full_image_path} (was {full_image_path})")
@@ -390,7 +391,7 @@ def project_tiled_annotations_to_bulk(metadata_path, coco_data_all_annots, bulk_
 
     # Plotting/saving uses the consolidated list of annotations for the bulk image
     if do_plot_annotations or do_save_img:
-        bulk_image_full_path = os.path.join(content_root_dir, bulk_images_dir_name, bulk_img_name, f"{bulk_img_name}.jpg")
+        bulk_image_full_path = os.path.join(content_root_dir, bulk_images_dir_name, f"{bulk_img_name}.jpg")
         plot_shifted_annotations_on_image(
             all_shifted_annotations_for_bulk, 
             all_invalid_polygons_for_bulk, # Pass list of coordinate lists
@@ -585,7 +586,7 @@ def main(args):
 
     # 3. Update image paths and dimensions
     # This step reads tile images, so content_root should point to where tile images are (e.g. batch-1/IMG/IMG_tile_0.jpg)
-    coco_format_data = update_image_paths_and_dimensions(coco_format_data, args.content_root_dir)
+    coco_format_data = update_image_paths_and_dimensions(coco_format_data, args.content_root_dir, args.annotation_tiles_dir_name)
     if not coco_format_data.get('images'):
         print("No images found after path updates. Exiting.")
         return
@@ -605,10 +606,9 @@ def main(args):
     # all_invalid_projected_polygons_info = [] 
 
     batch_dirs_to_process = []
-    if args.batch1_data_dir_name:
-        batch_dirs_to_process.append(args.batch1_data_dir_name)
-    if args.batch2_data_dir_name:
-        batch_dirs_to_process.append(args.batch2_data_dir_name)
+    if args.annotation_tiles_dir_name:
+        batch_dirs_to_process.append(args.annotation_tiles_dir_name)
+    print(batch_dirs_to_process)
 
     total_invalid_polygons_overall = 0
     total_segments_processed_overall = 0
@@ -693,7 +693,7 @@ def main(args):
 
         # Path to the original bulk .jpg image to get its dimensions
         # This path is relative to content_root_dir
-        original_bulk_jpg_rel_path = os.path.join(args.bulk_images_dir_name, bulk_img_name, f"{bulk_img_name}.jpg")
+        original_bulk_jpg_rel_path = os.path.join(args.bulk_images_dir_name, f"{bulk_img_name}.jpg")
         original_bulk_jpg_full_path = os.path.join(args.content_root_dir, original_bulk_jpg_rel_path)
         
         if os.path.exists(original_bulk_jpg_full_path):
@@ -808,12 +808,10 @@ if __name__ == "__main__":
     parser.add_argument('--input_coco_json', type=str, required=True,
                         help="Path to the initial COCO JSON file with tiled annotations.")
     parser.add_argument('--content_root_dir', type=str, default="data",
-                        help="Root directory where image data (e.g., 'batch-1', 'batch-2', 'bulk_batch_1_and_2') is located. Paths in COCO JSON and for metadata will be relative to this.")
-    parser.add_argument('--batch1_data_dir_name', type=str, default="batch-1",
-                        help="Name of the directory for batch-1 data (containing image subfolders with tiles and metadata), relative to --content_root_dir.")
-    parser.add_argument('--batch2_data_dir_name', type=str, default="batch-2",
-                        help="Name of the directory for batch-2 data, relative to --content_root_dir.")
-    parser.add_argument('--bulk_images_dir_name', type=str, default="bulk_batch_1_and_2",
+                        help="Root directory where image data (e.g., 'annotation_tiles', 'edited') is located. Paths in COCO JSON and for metadata will be relative to this.")
+    parser.add_argument('--annotation_tiles_dir_name', type=str, default="annotation_tiles",
+                        help="Name of the unified directory containing image subfolders with tiles and metadata, relative to --content_root_dir.")
+    parser.add_argument('--bulk_images_dir_name', type=str, default="edited",
                         help="Name of the directory containing the original (non-tiled) bulk .jpg images, relative to --content_root_dir. Used for plotting and final COCO image dimensions/copying.")
 
     # --- Output Paths ---

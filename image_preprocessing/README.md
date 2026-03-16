@@ -18,31 +18,40 @@ The expected structure for this directory after running `pipeline.sh` is as foll
 ```bash
 image_preprocessing
    ├── data                               # Folder created by pipeline.sh
-        └── batch-1                       # Raw data -- downloaded automatically by pipeline.sh
-        └── batch-2       
-        └── bulk_batch_1_and_2      
-        └── preprocessing_output          # output of preprocessing scripts, (e.g., images with masks)
+        └── annotated_tiles               # Raw data (annotated_tiles.zip on Zenodo)
+        └── edited                        # Full bulk images (edited.zip on Zenodo)     
+        └── preprocessing_output          # output of preprocessing scripts
         └── lifeplan_b_v9                 # Uncropped, assembled bulk images
         └── lifeplan_b_v9_cropped         # Cropped, assembled bulk images
-        └── sahi_datasets                 # Tiled bulk images -- datasets to be used with ML models
+        └── sahi_datasets                 # Tiled bulk images -- for ML models
             └── sahi_512_keep_neg             
 
-   ├── annots_20250307_coco.json          # Dataset JSON for MassID45 (provided in this release)
+   ├── annots_20250307_coco.json          # Dataset JSON for MassID45 (provided in release)
    └── pipeline.sh                        # Main bash script for running preprocessing pipeline
 ```
 ### Installation
-To get started, clone the repository and install the necessary dependencies listed in requirements.txt.
+Follow the instructions to below to use the package on the Killarney (or similar Compute Canada) cluster.
 
 Steps:
 Clone the repository:
 ```bash
-git clone git@github.com:Jquinto64/MassID45.git
+git clone --recurse-submodules git@github.com:Jquinto64/MassID45.git
 cd MassID45
 ```
 
 ### Install dependencies:
 Make sure you have pip installed. Then run the following command to install the required Python packages:
 ```bash
+module load StdEnv/2020  gcc/9.3.0
+module load python/3.10.2
+module load cuda/11.8.0
+module load opencv/4.8.0
+
+ENV_NAME=<your_env_name_here>
+virtualenv --no-download virtualenvs/$ENV_NAME
+source ~/virtualenvs/$ENV_NAME/bin/activate
+pip install --no-index --upgrade pip
+pip install --no-index torch numpy matplotlib pandas
 pip install -r requirements.txt
 ```
 This will install all the necessary libraries needed for the script to run.

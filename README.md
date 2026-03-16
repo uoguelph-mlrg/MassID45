@@ -31,7 +31,3 @@ The `CutLER`, `Mask-RCNN`, `Mask2Former`, `MaskDINO`, and `Grounded-SAM-2` submo
 
 ## Model Checkpoints
 Model checkpoints can be downloaded at [Zenodo](https://zenodo.org/records/17831807).
-
-
-
-
