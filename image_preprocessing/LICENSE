@@ -51,9 +51,10 @@ This repository links to forks of six other repositories, each of which are gove
 - License: Apache 2.0
 - License Link: https://github.com/IDEA-Research/MaskDINO/blob/main/LICENSE
 ### Submodule: 
-- Repository: https://github.com/Jquinto64/MaskDINO-MassID45 (forked from https://github.com/Jquinto64/MaskDINO-MassID45)
-- License: Apache 2.0
-- License Link: https://github.com/IDEA-Research/MaskDINO/blob/main/LICENSE
+### Submodule: arth-imrec
+- Repository: https://github.com/Jquinto64/arth-imrec (forked from https://github.com/jorsholm/arth-imrec)
+- License: MIT
+- License Link: https://github.com/jorsholm/arth-imrec/blob/main/LICENSE
 
 ### Submodule: 
 - Repository: https://github.com/Jquinto64/arth-imrec (forked from https://github.com/jorsholm/arth-imrec)
