@@ -33,7 +33,7 @@ def download_data(save_path):
         except requests.exceptions.RequestException as e:
             print(f"An error occurred during download: {e}")
 
-    # Clean up zip fles 
+    # Clean up zip files 
     dir_files = os.listdir(save_path)
     for item in dir_files:
         if item.endswith(".zip"):
