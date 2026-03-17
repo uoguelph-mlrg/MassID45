@@ -46,9 +46,10 @@ This repository links to forks of six other repositories, each of which are gove
 - License: MIT
 - License Link: https://github.com/facebookresearch/Mask2Former/blob/main/LICENSE
 - Repository: https://github.com/Jquinto64/Mask2Former-MassID45 (forked from https://github.com/facebookresearch/Mask2Former)
-- License: MIT
-- License Link: https://github.com/facebookresearch/Mask2Former/blob/main/LICENSE
-
+### Submodule: MaskDINO
+- Repository: https://github.com/Jquinto64/MaskDINO-MassID45 (forked from https://github.com/IDEA-Research/MaskDINO)
+- License: Apache 2.0
+- License Link: https://github.com/IDEA-Research/MaskDINO/blob/main/LICENSE
 ### Submodule: 
 - Repository: https://github.com/Jquinto64/MaskDINO-MassID45 (forked from https://github.com/Jquinto64/MaskDINO-MassID45)
 - License: Apache 2.0
