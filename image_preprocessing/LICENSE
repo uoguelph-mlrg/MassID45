@@ -36,9 +36,10 @@ This repository links to forks of six other repositories, each of which are gove
 - Repository: https://github.com/Jquinto64/Grounded-SAM-2-MassID45 (forked from https://github.com/IDEA-Research/Grounded-SAM-2)
 - License: Apache 2.0
 - License Link: https://github.com/IDEA-Research/Grounded-SAM-2/blob/main/LICENSE
-'
-### Submodule: 
+### Submodule: Mask-RCNN
 - Repository: https://github.com/Jquinto64/Mask-RCNN-MassID45 (forked from https://github.com/facebookresearch/detectron2)
+- License: Apache 2.0
+- License Link: https://github.com/facebookresearch/detectron2/blob/main/LICENSE
 - License: Apache 2.0
 - License Link: https://github.com/facebookresearch/detectron2/blob/main/LICENSE
 
