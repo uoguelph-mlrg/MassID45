@@ -5,8 +5,8 @@ from urllib.parse import urlparse
 import zipfile
 
 URLS = [
-    "https://zenodo.org/records/17831807/files/bulk_images_edited.zip?download=1",
-    #<PLACEHOLDER FOR UPDATED ZENODO LINK TO ANNOTATED_TILES>
+    "https://zenodo.org/records/18963816/files/bulk_images_edited.zip?download=1",
+    "https://zenodo.org/records/18963816/files/annotation_tiles.zip?download=1"
 ]
 
 def download_data(save_path):
