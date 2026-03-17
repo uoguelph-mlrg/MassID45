@@ -32,7 +32,7 @@ This repository links to forks of six other repositories, each of which are gove
 - License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC-BY-NC-SA-4.0)
 - License Link: https://github.com/facebookresearch/CutLER/blob/main/LICENSE
 
-### Submodule: 
+### Submodule: Grounded-SAM-2
 - Repository: https://github.com/Jquinto64/Grounded-SAM-2-MassID45 (forked from https://github.com/IDEA-Research/Grounded-SAM-2)
 - License: Apache 2.0
 - License Link: https://github.com/IDEA-Research/Grounded-SAM-2/blob/main/LICENSE
