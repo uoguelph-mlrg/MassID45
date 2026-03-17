@@ -36,27 +36,25 @@ This repository links to forks of six other repositories, each of which are gove
 - Repository: https://github.com/Jquinto64/Grounded-SAM-2-MassID45 (forked from https://github.com/IDEA-Research/Grounded-SAM-2)
 - License: Apache 2.0
 - License Link: https://github.com/IDEA-Research/Grounded-SAM-2/blob/main/LICENSE
+
 ### Submodule: Mask-RCNN
 - Repository: https://github.com/Jquinto64/Mask-RCNN-MassID45 (forked from https://github.com/facebookresearch/detectron2)
 - License: Apache 2.0
 - License Link: https://github.com/facebookresearch/detectron2/blob/main/LICENSE
 - License: Apache 2.0
+
 ### Submodule: Mask2Former
 - Repository: https://github.com/Jquinto64/Mask2Former-MassID45 (forked from https://github.com/facebookresearch/Mask2Former)
 - License: MIT
 - License Link: https://github.com/facebookresearch/Mask2Former/blob/main/LICENSE
 - Repository: https://github.com/Jquinto64/Mask2Former-MassID45 (forked from https://github.com/facebookresearch/Mask2Former)
+
 ### Submodule: MaskDINO
 - Repository: https://github.com/Jquinto64/MaskDINO-MassID45 (forked from https://github.com/IDEA-Research/MaskDINO)
 - License: Apache 2.0
 - License Link: https://github.com/IDEA-Research/MaskDINO/blob/main/LICENSE
-### Submodule: 
-### Submodule: arth-imrec
-- Repository: https://github.com/Jquinto64/arth-imrec (forked from https://github.com/jorsholm/arth-imrec)
-- License: MIT
-- License Link: https://github.com/jorsholm/arth-imrec/blob/main/LICENSE
 
-### Submodule: 
+### Submodule: arth-imrec
 - Repository: https://github.com/Jquinto64/arth-imrec (forked from https://github.com/jorsholm/arth-imrec)
 - License: MIT
 - License Link: https://github.com/jorsholm/arth-imrec/blob/main/LICENSE

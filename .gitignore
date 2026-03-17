@@ -1,16 +1,10 @@
 # output dir
-output
-instant_test_output
-inference_test_output
-
-
 *.png
 *.diff
 *.jpg
 *.pdf
 *.save
 *.pth
-!/projects/DensePose/doc/images/*.jpg
 
 # compilation and distribution
 __pycache__
@@ -24,17 +18,6 @@ build/
 dist/
 wheels/
 
-# pytorch/python/numpy formats
-*.pth
-*.pkl
-*.npy
-*.ts
-model_ts*.txt
-
-# # ipython/jupyter notebooks
-# *.ipynb
-# **/.ipynb_checkpoints/
-
 # Editor temporaries
 *.swn
 *.swo
@@ -47,17 +30,7 @@ model_ts*.txt
 _darcs
 
 # project dirs
-/detectron2/model_zoo/configs
-/runs
-/slogs
-/datasets/*
-!/datasets/*.*
-/projects/*/datasets
-/models
-/snippet
-/archived
-output_*/
 /image_preprocessing/slogs
-/image_preprocessing/data
+/image_preprocessing/*data*
 
 
