@@ -30,36 +30,43 @@ image_preprocessing
    └── pipeline.sh                        # Main bash script for running preprocessing pipeline
 ```
 ### Installation
-Follow the instructions to below to use the package on the Killarney (or similar Compute Canada) cluster.
+The pipeline needs only Python and the packages in `requirements.txt`; it runs on CPUs and does not need a GPU. The steps below were tested on Vector's Killarney cluster, where we developed MassID45, and should work on other Digital Research Alliance of Canada clusters. On any other machine, use your own paths and environment manager.
 
-Steps:
-Clone the repository:
+Clone the repository (the submodules are not needed for preprocessing):
 ```bash
-git clone --recurse-submodules git@github.com:uoguelph-mlrg/MassID45.git
-cd MassID45
+git clone https://github.com/uoguelph-mlrg/MassID45.git
+cd MassID45/image_preprocessing
 ```
 
-### Install dependencies:
-Make sure you have pip installed. Then run the following command to install the required Python packages:
+### Install dependencies
+On a machine with internet access and no module system:
 ```bash
-module load StdEnv/2020  gcc/9.3.0
-module load python/3.10.2
-module load cuda/11.8.0
-module load opencv/4.8.0
-
-ENV_NAME=<your_env_name_here>
-virtualenv --no-download virtualenvs/$ENV_NAME
-source ~/virtualenvs/$ENV_NAME/bin/activate
-pip install --no-index --upgrade pip
-pip install --no-index torch numpy matplotlib pandas
+python3 -m venv ~/virtualenvs/massid45
+source ~/virtualenvs/massid45/bin/activate
 pip install -r requirements.txt
 ```
-This will install all the necessary libraries needed for the script to run.
+
+On Alliance clusters, build the environment from the Alliance wheelhouse. `sahi==0.11.18` is not in the wheelhouse, and its `opencv-python` requirement conflicts with the OpenCV module, so install it from PyPI without dependencies (the login node has internet access):
+```bash
+module load StdEnv/2023 python/3.10.13 opencv/4.9.0
+virtualenv --no-download ~/virtualenvs/massid45
+source ~/virtualenvs/massid45/bin/activate
+pip install --no-index --upgrade pip
+pip install --no-index torch "numpy<2" matplotlib Pillow shapely tqdm requests pyyaml fire terminaltables click
+pip download --no-deps --dest wheels sahi==0.11.18 pybboxes==0.1.6
+pip install --no-index --no-deps --find-links wheels sahi==0.11.18 pybboxes==0.1.6
+```
 
 ### How to Run
-Once the dependencies are installed, you can run the pipeline.sh script to process the data.
+`pipeline.sh` activates the environment in `VENV_DIR` (default `~/virtualenvs/massid45`) and, where the Alliance module system is present, loads the modules above. Slurm writes its log to `slogs/`, which must exist before you submit.
 
-Usage:
+With Slurm:
 ```bash
+mkdir -p slogs
 sbatch pipeline.sh
+# or, with an environment elsewhere:
+sbatch --export=ALL,VENV_DIR=/path/to/venv pipeline.sh
 ```
+On Killarney, submit from a directory under `/scratch` (for example, clone into `$SCRATCH`): Slurm refuses jobs submitted from `/home`. The run takes about an hour and peaks at about 11 GB of memory.
+
+Without Slurm, run it directly: `bash pipeline.sh`.
