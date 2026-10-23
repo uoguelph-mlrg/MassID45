@@ -18,8 +18,8 @@ The expected structure for this directory after running `pipeline.sh` is as foll
 ```bash
 image_preprocessing
    ├── data                               # Folder created by pipeline.sh
-        └── annotated_tiles               # Raw data (annotated_tiles.zip on Zenodo)
-        └── edited                        # Full bulk images (edited.zip on Zenodo)     
+        └── annotation_tiles              # Raw data (annotation_tiles.zip on Zenodo)
+        └── edited                        # Full bulk images (bulk_images_edited.zip on Zenodo)
         └── preprocessing_output          # output of preprocessing scripts
         └── lifeplan_b_v9                 # Uncropped, assembled bulk images
         └── lifeplan_b_v9_cropped         # Cropped, assembled bulk images
@@ -35,7 +35,7 @@ Follow the instructions to below to use the package on the Killarney (or similar
 Steps:
 Clone the repository:
 ```bash
-git clone --recurse-submodules git@github.com:Jquinto64/MassID45.git
+git clone --recurse-submodules git@github.com:uoguelph-mlrg/MassID45.git
 cd MassID45
 ```
 
