@@ -132,11 +132,7 @@ def get_sahi_tiled_annots(sliced_coco_data, min_size=15, remove_cutoff=False):
 
     return tiled_annotations, invalid_annotations, too_small_annotations, cutoff_annotations
 
-# Load test image for masking out invalid or cut-off images (if necessary or if remove_cutoff is True)
-test_img = cv2.imread("assets/G1BMRA_0010.jpg", cv2.IMREAD_COLOR)
-background_value = test_img[1400:1450, 2000:2050, :]
-
-def draw_mask(image, mask_data, color, shape='polygon', roi = None):
+def draw_mask(image, mask_data, color, shape='polygon'):
     mask = np.zeros_like(image)
     if shape == 'square':
         # Draw a square using the bounding box coordinates
@@ -146,6 +142,10 @@ def draw_mask(image, mask_data, color, shape='polygon', roi = None):
     elif shape == 'filled_square':
       # Draw a square using the bounding box coordinates
       x, y, width, height = cv2.boundingRect(np.array(mask_data, dtype=np.int32))
+      # Fill with a fixed tray-background colour. The value is the mean of a
+      # background patch read in BGR order, but `image` is RGB here, so the fill
+      # is 3 levels bluer than the tray. Kept as is: the published tiles and
+      # checkpoints were made with it.
       color = (229, 231, 232)
       image = cv2.rectangle(image, (x, y), (x + width, y + height), color, -1)
       return image
@@ -184,7 +184,7 @@ def visualize_tiled_annotations_sahi_orig(
         for invalid_ann in annotations_invalid:
           color = (255, 0, 0)  # Red color for invalid polygons
           # Call draw_mask with shape='square' to draw a bounding box square
-          image = draw_mask(image, invalid_ann, color, shape = 'filled_square', roi = background_value)
+          image = draw_mask(image, invalid_ann, color, shape = 'filled_square')
       
       #  Draw cut-off masks as squares (we may not want to mask these out)
       if len(annotations_cutoff) > 0:
@@ -192,7 +192,7 @@ def visualize_tiled_annotations_sahi_orig(
           color = (128, 0, 128)  # Red color for invalid polygons
           # Call draw_mask with shape='square' to draw a bounding box square
           if remove_cutoff is True:
-            image = draw_mask(image, cutoff_ann, color, shape = 'filled_square', roi = background_value)
+            image = draw_mask(image, cutoff_ann, color, shape = 'filled_square')
             # Save masked images
             cv2.imwrite(f"{masked_save_path}/{label}.png", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
           else: 
@@ -270,14 +270,14 @@ def visualize_tiled_annotations_sahi(
             needs_masking = True
             for invalid_ann in annotations_invalid:
                 masked_image = draw_mask(masked_image, invalid_ann, color=(255, 0, 0), 
-                                      shape='filled_square', roi=background_value)
+                                      shape='filled_square')
         
         # Mask out cutoff regions if requested
         if len(annotations_cutoff) > 0 and remove_cutoff:
             needs_masking = True
             for cutoff_ann in annotations_cutoff:
                 masked_image = draw_mask(masked_image, cutoff_ann, color=(128, 0, 128),
-                                      shape='filled_square', roi=background_value)
+                                      shape='filled_square')
 
         # Save the masked image (or original if no masking needed)
         if save_img:
