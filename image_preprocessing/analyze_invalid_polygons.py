@@ -30,6 +30,9 @@ def main(args):
         any_invalid = any_invalid or invalids > 0
 
         print(f"[{split}]")
+        if total == 0:
+            print("No polygons")
+            continue
         print(f"Invalids: {invalids} ({invalids/total*100:.2f}%)")
         print(f"Valids: {valids} ({valids/total*100:.2f}%)")
         print(f"Total: {total}")
