@@ -67,6 +67,6 @@ sbatch pipeline.sh
 # or, with an environment elsewhere:
 sbatch --export=ALL,VENV_DIR=/path/to/venv pipeline.sh
 ```
-On Killarney, submit from a directory under `/scratch` (for example, clone into `$SCRATCH`): Slurm refuses jobs submitted from `/home`. The run takes about an hour and peaks at about 11 GB of memory.
+On Killarney, submit from a directory under `/scratch` (for example, clone into `$SCRATCH`): Slurm refuses jobs submitted from `/home`. The run takes about an hour and peaks at about 16 GB of memory.
 
 Without Slurm, run it directly: `bash pipeline.sh`.

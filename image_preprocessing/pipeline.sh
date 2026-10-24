@@ -1,7 +1,7 @@
 #!/bin/bash
 # The preprocessing runs on CPUs only; no GPU is needed.
 #SBATCH --cpus-per-task=16   # number of CPU cores
-#SBATCH --mem=16G           # memory per node (peak was about 11 GB on Killarney)
+#SBATCH --mem=32G           # memory per node (peak was about 16 GB on Killarney)
 #SBATCH --time=4:00:00
 #SBATCH --output=slogs/%x_%j.out
                             # %x=job-name, %j=job ID
