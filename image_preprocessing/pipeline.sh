@@ -17,8 +17,9 @@ set -eo pipefail
 VENV_DIR=${VENV_DIR:-$HOME/virtualenvs/massid45}
 
 # On Digital Research Alliance of Canada clusters (e.g., Vector's Killarney),
-# load the modules the environment was built with; elsewhere, skip this
-if command -v module >/dev/null 2>&1; then
+# which set CC_CLUSTER, load the modules the environment was built with;
+# elsewhere, skip this and rely on VENV_DIR alone
+if [ -n "${CC_CLUSTER:-}" ]; then
     module load StdEnv/2023 python/3.10.13 opencv/4.9.0
 fi
 source "$VENV_DIR/bin/activate"

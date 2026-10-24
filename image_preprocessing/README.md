@@ -58,7 +58,7 @@ pip install --no-index --no-deps --find-links wheels sahi==0.11.18 pybboxes==0.1
 ```
 
 ### How to Run
-`pipeline.sh` activates the environment in `VENV_DIR` (default `~/virtualenvs/massid45`) and, where the Alliance module system is present, loads the modules above. Slurm writes its log to `slogs/`, which must exist before you submit.
+`pipeline.sh` activates the environment in `VENV_DIR` (default `~/virtualenvs/massid45`) and, on Alliance clusters (where `CC_CLUSTER` is set), loads the modules above. Slurm writes its log to `slogs/`, which must exist before you submit.
 
 With Slurm:
 ```bash
