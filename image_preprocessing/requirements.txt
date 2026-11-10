@@ -2,3 +2,7 @@ Pillow  # for Image and ImageDraw
 shapely  # for geometry functions like Point, Polygon, etc.
 tqdm  # progress bar utility
 sahi==0.11.18
+torch  # sahi 0.11.18 imports torch, although no preprocessing step uses it
+numpy<2  # sahi 0.11.18 requires numpy<2
+matplotlib  # assemble_annotations.py
+requests  # download_data.py

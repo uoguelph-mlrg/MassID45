@@ -1,22 +1,28 @@
 #!/bin/bash
-#SBATCH --gres=gpu:l40s:1   # request GPU(s)
+# The preprocessing runs on CPUs only; no GPU is needed.
 #SBATCH --cpus-per-task=16   # number of CPU cores
-#SBATCH --mem=12G           # memory per node
-#SBATCH --array=0           # array value (for running multiple seeds, etc)
+#SBATCH --mem=32G           # memory per node (peak was about 16 GB on Killarney)
 #SBATCH --time=4:00:00
-#SBATCH --output=slogs/%x_%A-%a_%n-%t.out
-                            # %x=job-name, %A=job ID, %a=array value, %n=node rank, %t=task rank, %N=hostname
-                            # Note: You must manually create output directory "slogs" 
+#SBATCH --output=slogs/%x_%j.out
+                            # %x=job-name, %j=job ID
+                            # Note: Slurm does not create "slogs"; run "mkdir -p slogs" before sbatch
 #SBATCH --open-mode=append  # Use append mode otherwise preemption resets the checkpoint file
 #SBATCH --job-name=massid45_cleaning
 
-ENV_NAME=mid45_testing
-module load StdEnv/2020 gcc/9.3.0
-module load cuda/11.8.0
-module load python/3.10.2
-module load opencv/4.8.0
-source /home/jquinto/projects/aip-gwtaylor/jquinto/virtualenvs/$ENV_NAME/bin/activate
-SEED="$SLURM_ARRAY_TASK_ID"
+# Stop at the first failing step instead of running later steps on missing data
+set -eo pipefail
+
+# Python virtual environment with requirements.txt installed (see README.md);
+# override with: sbatch --export=ALL,VENV_DIR=/path/to/venv pipeline.sh
+VENV_DIR=${VENV_DIR:-$HOME/virtualenvs/massid45}
+
+# On Digital Research Alliance of Canada clusters (e.g., Vector's Killarney),
+# which set CC_CLUSTER, load the modules the environment was built with;
+# elsewhere, skip this and rely on VENV_DIR alone
+if [ -n "${CC_CLUSTER:-}" ]; then
+    module load StdEnv/2023 python/3.10.13 opencv/4.9.0
+fi
+source "$VENV_DIR/bin/activate"
 
 # Debugging outputs
 pwd
@@ -71,7 +77,7 @@ python crop_bulk_imgs.py \
 
 # Divides bulk images into tiles using SAHI
 python tile_imgs.py \
-    --input_base_dir data/${DATASET_NAME}_cropped \
+    --input_base_dir ${DATA_DIR}/${DATASET_NAME}_cropped \
     --sahi_output_base_dir ${DATA_DIR}/sahi_datasets \
     --zoom_factors ${ZOOM_FACTOR} \
     --base_slice_size ${BASE_SLICE_SIZE} \

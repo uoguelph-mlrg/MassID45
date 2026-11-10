@@ -1,6 +1,7 @@
 import argparse
 import os
 import requests
+import sys
 from urllib.parse import urlparse
 import zipfile
 
@@ -31,7 +32,8 @@ def download_data(save_path):
             print(f"Extraction complete to directory: {save_path}")
 
         except requests.exceptions.RequestException as e:
-            print(f"An error occurred during download: {e}")
+            # Exit non-zero so pipeline.sh stops instead of running on missing data
+            sys.exit(f"An error occurred during download: {e}")
 
     # Clean up zip files 
     dir_files = os.listdir(save_path)
